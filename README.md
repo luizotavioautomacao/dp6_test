@@ -7,22 +7,21 @@
 > ⚠️ **Atenção**
 > Soluções baseadas em *event-driven pipelines* (como triggers em tempo real) costumam gerar custos elevados e complexidade operacional que raramente se justificam no contexto de marketing.
 > Um **dashboard diário** já atende muito bem às necessidades analíticas.
-> Para isso, o ideal é ter uma aplicação que consulte diretamente os dados disponíveis nos bancos de dados das aplicações.
 
 ---
 
 ## 🧭 Fluxo Completo de Dados (Fonte: Aplicações Web/App e Sistemas Internos)
 
 ```text
-+-------------------------+     +----------------------------------+
-| Aplicações Web (ecom)   |     | Aplicativos Mobile (iOS/Android) |
-+-----------+-------------+     +-------------+--------------------+
++-------------------------+    +----------------------------------+
+| Aplicações Web (ecom)   |    | Aplicativos Mobile (iOS/Android) |
++-----------+-------------+    +------------+---------------------+
             |                               |
             |                               |
             v                               v
  +---------------------+        +-------------------------+
  | GA4 (via gtag.js /  |        | Firebase + GA4 SDK      |
- | Google Tag Manager) |        +-------------------------+
+ | Google Tag Manager) |        +----------+--------------+
  +----------+----------+                   |
             |                              v
             |                +-----------------------------+
@@ -31,26 +30,26 @@
                              +-------------+---------------+
                                            |
 +------------------------------+     +------------------------+
-| Sistemas Internos (ERP/CRM) |<---> |  Python ETL Scripts    |
+| Sistemas Internos (ERP/CRM)  |<--> |  Python ETL Scripts    |
 +------------------------------+     |  (EC2 / Lambda / cron) |
                                      +-----------+------------+
                                                  |
-                        +----------------------------+
-                        | Snowflake (RAW + STG layers)|
-                        +----------------------------+
+                        +------------------------------+
+                        | Snowflake (RAW + STG layers) |
+                        +----------+-------------------+
                                    |
-                            +------+------+
-                            |   dbt models |
-                            +------+------+
+                            +------+-------+
+                            |  dbt models  |
+                            +------+-------+
                                    |
-                             +-----v------+
+                             +-----v-------+
                              | Final tables|
                              | (CPA, ROAS) |
                              +-----+-------+
                                    |
                     +--------------v-------------------------+
                     |  Dashboard (BI / Streamlit/ Metabase)  |
-                    +-----------------------------------------+
+                    +----------------------------------------+
 ```
 
 Este fluxo representa a origem dos dados diretamente das aplicações (frontend e backend) e sistemas internos, além das integrações com plataformas externas de mídia e analytics.
@@ -67,27 +66,48 @@ Este fluxo representa a origem dos dados diretamente das aplicações (frontend 
                               v
     +------------------------------+     +------------------------+
     | Facebook Ads API (Meta)      |<--->|  Python ETL Scripts    |
-    +------------------------------+     |  (EC2 / Lambda / cron) |
-                              |             +-----------+------------+
+    +-------------------------+----+     |  (EC2 / Lambda / cron) |
+                              |          +--------------+---------+
                               v                         |
-                       +----------------------------+   |
-                       | Snowflake (RAW + STG layers)|<--+
-                       +----------------------------+
+                    +-----------------------------+     |
+                    | Snowflake (RAW + STG layers)| <---+
+                    +-----------------------------+
                                   |
-                           +------+------+
-                           |   dbt models |
-                           +------+------+
+                           +------+-------+
+                           |  dbt models  |
+                           +------+-------+
                                   |
-                            +-----v------+
-                            | Final tables|
-                            | (CPA, ROAS) |
-                            +-----+-------+
+                            +-----v--------+
+                            | Final tables |
+                            | (CPA, ROAS)  |
+                            +-----+--------+
                                   |
               +-------------------▼---------------------+
               |  Dashboard (BI / Streamlit / Metabase)  |
               +-----------------------------------------+
 ```
-
+### Overview
+                   +---------------------+
+                   |  Fontes de Dados    |
+                   +----------+----------+
+                              |
+              +---------------v------------------+
+              | Snowflake Data Cloud             |
+              | +-----------------------------+  |
+              | | RAW Layer (VARCHAR/JSON)    |  |
+              | +-----------------------------+  |
+              | | STG Layer (Tipado/Normalizado) |
+              | +-----------------------------+  |
+              | | MATS (Modelagem dbt)        |  |
+              | +-----------------------------+  |
+              +---------------+------------------+
+                              |
+                +-------------v-------------+
+                | Camada de Visualização    |
+                | +----------+ +-----------+|
+                | Streamlit | BI | Metabase |
+                | +----------+ +-----------+|
+                +---------------------------+
 ---
 
 ## 📦 B.1 Componentes e Descrição
@@ -101,13 +121,13 @@ Este fluxo representa a origem dos dados diretamente das aplicações (frontend 
 | Snowflake                  | Data warehouse em nuvem para dados estruturados  | [https://docs.snowflake.com/](https://docs.snowflake.com/)                                                                                             |
 | dbt                        | Modelagem e transformação de dados               | [https://docs.getdbt.com/](https://docs.getdbt.com/)                                                                                                   |
 | Streamlit (Dashboards)     | Visualização interativa e criação de Data Apps   | [https://streamlit.io/](https://streamlit.io/)                                                                                                         |
-| Metabase                   | Dashboard exploratório para negócios e marketing | [https://www.metabase.com/docs/latest/](https://www.metabase.com/docs/latest/)                                                                         |
+| Metabase  (Dashboards)     | Dashboard exploratório para negócios e marketing | [https://www.metabase.com/docs/latest/](https://www.metabase.com/docs/latest/)                                                                         |
 | Power BI (Dashboards)      | Visualização de dados e dashboards corporativos  | [https://powerbi.microsoft.com/](https://powerbi.microsoft.com/)                                                                                       |
 | Airflow (opcional)         | Orquestração de pipelines, monitoramento         | [https://airflow.apache.org/](https://airflow.apache.org/)                                                                                             |
 | Roles/Masking (Snowflake)  | Segurança e controle de acesso a dados sensíveis | [https://docs.snowflake.com/en/user-guide/security-access-control-overview](https://docs.snowflake.com/en/user-guide/security-access-control-overview) |
 
 
-## B.2 Melhorias 
+## 🎯 B.2 Melhorias 
 
 | Componente              | Melhoria Proposta                         | Impacto Esperado                     |
 |-----------------------  |-------------------------------------------|--------------------------------------|
@@ -137,7 +157,7 @@ Este fluxo representa a origem dos dados diretamente das aplicações (frontend 
 * Permissão para leitura/escrita no Snowflake (warehouse + database + schemas).
 * Contas e roles criadas: `etl_engineer`, `marketing_analyst`, `external_agency`.
 * Equipe de marketing define métricas (ex: o que é "conversão").
-* Acesso à ferramenta de visualização (BI, Streamlit, etc).
+* Acesso à ferramenta de visualização (BI, Streamlit, Metabase, etc).
 
 ---
 
@@ -185,7 +205,7 @@ Este prazo contempla a **primeira release funcional (MVP)** da solução, entreg
 | **Total estimado (v1)**        | **28 dias** | Primeira entrega com valor tangível para o cliente             |
 
 
-## 📊 Matriz RACI (Baseado em PMBOK)
+## 📊 Matriz RACI
 
 | Atividade                  | Eng. Dados | Anal. BI | Product Owner | Marketing |
 |----------------------------|------------|----------|---------------|-----------|
@@ -200,6 +220,14 @@ Este prazo contempla a **primeira release funcional (MVP)** da solução, entreg
 - **C** (Consulted): Deve ser consultado  
 - **I** (Informed): Deve ser informado  
 
+```mermaid
+pie title Distribuição de Responsabilidades
+    "Eng. Dados (R)" : 35
+    "Analytics (A)" : 25
+    "Marketing (C)" : 20
+    "PO (I)" : 20
+```
+
 ## 🚀 Customer Journey Map 2.0 (Foco KPIs)
 
 | Fase            | KPI Alvo                | Melhoria Proposta                  |
@@ -213,6 +241,27 @@ Este prazo contempla a **primeira release funcional (MVP)** da solução, entreg
 2. Padronização certificações para alunos
 3. Hotspots com tutoriais contextuais
 
+## 🚀 Customer Journey Map 3.0
+
+| Fase           | 🎯 KPI Alvo       | 🚀 Aceleração               | Ferramentas Utilizadas      |
+|----------------|-------------------|-----------------------------|-----------------------------|
+| **Descoberta** | CTR > 4.2%       | Landing pages AI-driven     | Google Optimize + Hotjar    |
+| **Avaliação**  | Tempo < 90s      | Templates one-click         | Figma + Storybook + UXPin   |
+| **Conversão**  | Trial > Paid 28% | Gamificação com progress bar| Stripe + Amplitude + dbt    |
+
+**Fluxo Detalhado:**
+
+```mermaid
+journey
+    title Jornada do Cliente 3.0
+    section Descoberta
+      Acesso: 5: Visitante
+      Conversão: 3: Lead
+    section Avaliação
+      Engajamento: 4: Usuário Trial
+    section Conversão
+      Retenção: 2: Cliente Pago
+```
 ---
 
 ## 🔄 Ciclo de Melhoria Contínua
@@ -227,6 +276,19 @@ Este prazo contempla a **primeira release funcional (MVP)** da solução, entreg
 
 3. **Visualização**:
    Data App em Streamilit para interações com os dados
+
+```mermaid
+   graph LR
+    A[Coleta] --> B[Processamento]
+    B --> C[Visualização]
+    C --> D[Feedback]
+    D -->|Loop| A
+    
+    style A fill:#f9f,stroke:#333
+    style B fill:#bbf,stroke:#333
+    style C fill:#f96,stroke:#333
+    style D fill:#6f9,stroke:#333
+```
 ---
 
 ## 🔺 Alinhamento com Requisitos DP6
@@ -242,5 +304,5 @@ Este prazo contempla a **primeira release funcional (MVP)** da solução, entreg
 
 ---
 
-**Autor:** Luiz Otávio Mendes de Oliveira
+**Autor:** Luiz Otávio Mendes de Oliveira  
 **Cartão de vistita:** [https://luizotavio.netlify.app](https://luizotavio.netlify.app)
